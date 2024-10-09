@@ -44,7 +44,7 @@ LIBCC = -lgcc
 CPPFLAGS =
 CFLAGS =
 CFLAGS_AUTO = -Os -pipe
-CFLAGS_C99FSE = -std=c99 -ffreestanding -nostdinc 
+CFLAGS_C99FSE = -std=c99 -ffreestanding -nostdinc
 
 CFLAGS_ALL = $(CFLAGS_C99FSE)
 CFLAGS_ALL += -D_XOPEN_SOURCE=700 -I$(srcdir)/arch/$(ARCH) -I$(srcdir)/arch/generic -Iobj/src/internal -I$(srcdir)/src/include -I$(srcdir)/src/internal -Iobj/include -I$(srcdir)/include
@@ -86,7 +86,7 @@ all:
 
 else
 
-all: $(ALL_LIBS) $(ALL_TOOLS)
+all: $(ALL_LIBS) $(ALL_TOOLS) build/compile_commands.json
 
 OBJ_DIRS = $(sort $(patsubst %/,%,$(dir $(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(GENH) $(GENH_INT))) obj/include)
 
@@ -226,11 +226,24 @@ musl-git-%.tar.gz: .git
 musl-%.tar.gz: .git
 	 git --git-dir=$(srcdir)/.git archive --format=tar.gz --prefix=$(patsubst %.tar.gz,%,$@)/ -o $@ v$(patsubst musl-%.tar.gz,%,$@)
 
+build/compile_commands.json: $(ALL_OBJS)
+	mkdir -p build
+	echo '[' > $@
+	for src in $(BASE_SRCS) $(ARCH_SRCS); do \
+		obj=$${src%.c}.o; \
+		echo '  {' >> $@; \
+		echo '    "directory": "$(CURDIR)",' >> $@; \
+		echo '    "command": "$(CC) $(CFLAGS_ALL) -c -o obj/'$${obj#$(srcdir)/}' '$${src}'",' >> $@; \
+		echo '    "file": "'$${src}'"' >> $@; \
+		echo '  },' >> $@; \
+	done
+	sed -i '$$s/,$$//' $@
+	echo ']' >> $@
+
 endif
 
 clean:
-	rm -rf obj lib
-
+	rm -rf obj lib build
 distclean: clean
 	rm -f config.mak
 
